@@ -13,8 +13,8 @@ class Tile:
         self.owner = None
         self.tileType = TileType.FOW
         self.hasCity = False
-        self.armies = []
-        self.workers = []
+        self.hasArmy = False
+        self.hasWorkers = False
     
     def setOwner(self, owner: PlayerTag):
         """
@@ -29,43 +29,24 @@ class Tile:
         if not self.hasCity:
             self.hasCity = True
             self.resistance *= 1.5
+
+    def addArmy(self):
+        self.hasArmy = True
     
-    def addArmy(self, army: Army):
-        """
-        Adds army.
-        """
-        army.updateRes(self.resistance)
-        if army not in self.armies: self.armies.append(army)
-    
-    def removeArmy(self, army: Army):
-        """
-        Sets the tile as not having an army.
-        """
-        if army in self.armies: self.armies.remove(army)
-    
+    def addWorkers(self):
+        self.hasWorkers = True
+
     def hasArmies(self):
         """
         Checks if the tile has any armies
         """
-        return (len(self.armies)>0)
-    
-    def addWorkers(self, worker: Worker):
-        """
-        Sets the tile as having a worker.
-        """
-        if worker not in self.workers: self.workers.append(worker)
-
-    def removeWorkers(self, worker: Worker):
-        """
-        Sets the tile as not having a worker.
-        """
-        if worker in self.workers: self.workers.remove(worker)
+        return self.hasArmy
     
     def hasWorkers(self):
         """
         Checks if the tile has any armies
         """
-        return (len(self.workers) > 0)
+        return self.hasWorkers
     
     def setType(self, tt: TileType):
         """

@@ -47,7 +47,7 @@ def __main__(name: str, key: str, url: str):
                     workerCount = 0
                     c = board.getLoc(city)
                     for pos in c.getDistAway():
-                        if board.getLoc(pos).hasWorkers():
+                        if board.getLoc(pos).hasWorkers:
                             workerCount += 1
                     if workerCount == len(c.getDistAway()): saturated+=1
 
@@ -55,7 +55,7 @@ def __main__(name: str, key: str, url: str):
                     opts = [(0)]
                     for pos in board.visible:
                         t = board.getLoc(pos)
-                        if not t.hasCity and t.hasWorkers():
+                        if not t.hasCity and t.hasWorkers:
                             score = t.prod + t.food + t.trade
                             score *= board.terrainResistance(pos, [PlayerTag.US, None])
                             if opts[0][0] < score:
@@ -77,23 +77,26 @@ def __main__(name: str, key: str, url: str):
                         surr = board.getLoc(city).getDistAway()
                         for loc in surr:
                             t = board.getLoc(loc)
-                            if not t.hasWorkers():
+                            if not t.hasWorkers:
                                 score = t.food + t.prod + t.trade
                                 options.append((score, loc, city))
                     options.sort(key=lambda x: x[0], reverse=True)
                     
                     x = 0
-                    while x < ((prodAvailable - prodAvailable % 8) / 8) and x < len(options) and x < round(len(players[0].armies) * 2):
+                    while x <= ((prodAvailable - prodAvailable % 8) / 8) and x <= len(options) and x <= round(len(players[0].armies) * 2):
                         cl.produce(ProduceType.WORKER, options[x][2])
                         # TODO: Actually add the bloody worker object in.
                         w = Worker()
                         w.setPos(options[x][2])
-                        w.setDestination(options[x][1])
-                        players[0].addWorker(w)
+                        #print(options[x][1])
+                        #print(options[x][2])
+                        w.setDest(options[x][1])
+                        print(w.dest)
+                        players[0].workers.append(w)
                         prodAvailable -= 8
                         x += 1
                         
-                
+                    """
                     if prodAvailable >= 8:
                         options = []
                         for city in players[0].cities:
@@ -112,27 +115,28 @@ def __main__(name: str, key: str, url: str):
                             players[0].armies.append(a)
                             prodAvailable -= 8
                             x += 1
+                    """
                     cl.endTurn()
 
             for worker in players[0].workers:
                 if not worker.atDestination():
                     newPos = worker.getNext()
-                    board.moveWorker(worker.currPos, newPos)
+                    cl.moveWorker(worker.currPos, newPos)
                     worker.currPos = newPos
-            
+            """
             for army in players[0].armies:
                 if not army.atDestination():
                     newPos = army.getNext()
-                    board.moveArmy(army.currPos, newPos)
+                    cl.moveArmy(army.currPos, newPos)
                     army.currPos = newPos
-            
+            """
 
                 
                     
 
 if __name__ == "__main__":  
-    __main__("dumpster fire", "ahZai6ie", "https://codekata-civ.herokuapp.com/" )
-    #__main__("b", "secret0", "http://localhost:8080")
+    #__main__("dumpster fire", "ahZai6ie", "https://codekata-civ.herokuapp.com/" )
+    __main__("b", "secret0", "http://localhost:8080")
 
     
 

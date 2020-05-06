@@ -15,7 +15,7 @@ class Board:
         """
         Returns Tile object associated with location loc
         """
-        return self.allTiles[loc[0]][loc[1]]
+        return self.allTiles[int(loc[0])][int(loc[1])]
 
     def updateType(self, board: list):
         """
@@ -53,21 +53,21 @@ class Board:
     def updateArmies(self, armies: list):
         for row in self.allTiles:
             for t in row:
-                t.armies = []
+                t.hasArmy = False
         for army in armies:
             pos = army.currPos
             t = self.getLoc(pos)
-            t.addArmy(army)
+            t.addArmy()
         # TODO: Armies reset - not safe, also army names are pizdec
     
     def updateWorkers(self, workers: list):
         for row in self.allTiles:
             for t in row:
-                t.workers = []
+                t.hasArmy = False
         for worker in workers:
             pos = worker.currPos
             t = self.getLoc(pos)
-            t.addWorker(worker)
+            t.addArmy()
 
     def terrainResistance(self, pos: tuple, owners: list, dist: int = 2):
         """

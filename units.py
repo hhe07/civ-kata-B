@@ -1,27 +1,34 @@
 class unitBase:
     def __init__(self):
         self.currPos = None
-        self.destination = None
+        self.dest = None
     
     def setPos(self, pos: tuple):
         self.currPos = pos
     
     def getNext(self):
-        deltaX = self.currPos[0] - self.destination[0]
-        deltaY = self.currPos[1] - self.destination[1]
-        xChange = (-1 * deltaX) / abs(deltaX)
-        yChange = (-1 * deltaY) / abs(deltaY)
+        deltaX = self.currPos[0] - self.dest[0]
+        deltaY = self.currPos[1] - self.dest[1]
+        if deltaX !=0:
+            xChange = (-1 * deltaX) / abs(deltaX)
+        else:
+            xChange = 0
+        if deltaY != 0:
+            yChange = (-1 * deltaY) / abs(deltaY)
+        else:
+            yChange = 0
         return (self.currPos[0] + xChange, self.currPos[1] + yChange)
     
-    def setDestination(self, pos: tuple):
-        self.destination = pos
+    def setDest(self, pos: tuple):
+        self.dest = pos
+        
     
     def atDestination(self):
-        return self.currPos == self.destination
+        return self.currPos == self.dest
 
 class Worker(unitBase):
     def __init__(self):
-        super().__init__(tag)
+        super().__init__()
     
 class Army(unitBase):
     def __init__(self):
