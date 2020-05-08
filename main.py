@@ -10,6 +10,7 @@ def __main__(name: str, key: str, url: str):
     cl.setName(name)
     board = Board()
     players = [Player(PlayerTag.US), Player(PlayerTag.TA), Player(PlayerTag.TB), Player(PlayerTag.TC)]
+
     while True:
         newBoard = cl.getBoard()
         newCities = cl.getCities()
@@ -20,123 +21,119 @@ def __main__(name: str, key: str, url: str):
 
         board.updateType(newBoard["board"])
         board.updateCities(newCities["cities"])
-        board.updateArmies(players[0].armies)  # TODO: Non-functional
-        board.updateWorkers(players[0].workers)  # TODO: Non-functional
+        board.updateArmies(newArmies["armies"])  # TODO: Non-functional
+        board.updateWorkers(newWorkers["workers"])  # TODO: Non-functional
         
         playerCount = 0
         for player in players:
             player.updateRes(newRes["resources"][playerCount])
             player.updateBuffs(newBuffs["players"][playerCount])
-            player.updateArmies(newArmies["armies"][playerCount])
-            player.updateWorkers(newWorkers["workers"][playerCount])
+            #player.updateArmies(newArmies["armies"][playerCount], PlayerTag(playerCount))
+            #player.updateWorkers(newWorkers["workers"][playerCount], PlayerTag(playerCount))
             player.updateCities(newCities["cities"][playerCount])
             playerCount += 1
         if cl.getCurrentTurn()["turn"] == 0:
-            if not players[0].canSmallConstr():
-                cl.endTurn()
-            else:
+            if players[0].canSmallConstr():
                 if players[0].canTradeConstr():
-                    cl.produceTech(TechType.DEFENSE)
-                # TODO: Figure out how to prioritise building cities, workers, armies
-                # TODO: Convert enums into numbers prior to API req?
+                    tradeAvailable = players[0].trade
+                    while tradeAvailable >=20:
+                        cl.produceTech(TechType.OFFENSE)
+                        tradeAvailable -= 20
+                        if tradeAvailable >= 20:
+                            cl.produceTech(TechType.DEFENSE)
+                            tradeAvailable -= 20                
+
                 prodAvailable = players[0].production
+                foodAvailable = players[0].getMaxSustain()
                 
-                saturated = 0
-                
+
+                needsSaturation = []
+                saturated = []
                 for city in players[0].cities:
-                    workerCount = 0
-                    c = board.getLoc(city)
-                    for pos in c.getDistAway():
-                        if board.getLoc(pos).hasWorkers:
-                            workerCount += 1
-                    if workerCount == len(c.getDistAway()): saturated+=1
+                    if board.isSaturated(city):
+                        saturated.append(city)
+                    else:
+                        needsSaturation.append(city)
 
-                if saturated > 0:
-                    opts = [(0)]
-                    for pos in board.visible:
-                        t = board.getLoc(pos)
-                        if not t.hasCity and t.hasWorkers:
-                            score = t.prod + t.food + t.trade
-                            score *= board.terrainResistance(pos, [PlayerTag.US, None])
-                            if opts[0][0] < score:
-                                opts = [(score, pos)]
-                            elif opts[0][0] == score:
-                                opts.append((score, pos))
-                    ourProd = players[0].production
-                    x = 0
-                    while x < ((ourProd - ourProd % 24) / 24) and x < len(opts) and x < saturated:
-                        if len(opts[x]) == 2:
-                            cl.produce(ProduceType.CITY, opts[x])
-                            prodAvailable -= 24
-                            x+=1
-
-                if prodAvailable >= 8:
-                    options = []
-                    # Get all tiles without workers
+                potentialWorkerBuilds = []  # Base number of workers to build off of this
+                for req in needsSaturation:
+                    potentialWorkerBuilds.extend(board.getUnfilledWork(req))
+                
+                potentialWorkerBuilds = list(dict.fromkeys(potentialWorkerBuilds))
+                potentialWorkerBuilds.sort(key=lambda x: x[0], reverse=True)
+                if len(saturated) == len(players[0].cities):
+                    # If all cities saturated, start to build cities
+                    # TODO: Update getPossibleCities after every build?
+                    while prodAvailable >= 24 and players[0].units <= foodAvailable:
+                        l = board.getPossibleCities()
+                        cl.produce(ProduceType.CITY, l[0][1])
+                        foodAvailable += board.getLoc(l[0][1]).food
+                        prodAvailable -= 24
+                        players[0].units += 1
+                        
+                    needsSaturation = []
                     for city in players[0].cities:
-                        surr = board.getLoc(city).getDistAway()
-                        for loc in surr:
-                            t = board.getLoc(loc)
-                            if not t.hasWorkers:
-                                score = t.food + t.prod + t.trade
-                                options.append((score, loc, city))
-                    options.sort(key=lambda x: x[0], reverse=True)
-                    
-                    x = 0
-                    while x <= ((prodAvailable - prodAvailable % 8) / 8) and x <= len(options) and x <= round(len(players[0].armies) * 2):
-                        cl.produce(ProduceType.WORKER, options[x][2])
-                        # TODO: Actually add the bloody worker object in.
-                        w = Worker()
-                        w.setPos(options[x][2])
-                        #print(options[x][1])
-                        #print(options[x][2])
-                        w.setDest(options[x][1])
-                        print(w.dest)
+                        if not board.isSaturated(city):
+                            needsSaturation.append(city)
+
+                    for req in needsSaturation:
+                        potentialWorkerBuilds.extend(board.getUnfilledWork(req))
+
+                for t in potentialWorkerBuilds:
+                    allWorkerLocs = [w.dest for w in players[0].workers]
+                    if prodAvailable >= 8 and players[0].units <= foodAvailable and t[2] not in allWorkerLocs:
+                        cl.produce(ProduceType.WORKER, t[1])
+                        w = Worker(t[2], t[1])
                         players[0].workers.append(w)
+                        foodAvailable += board.getLoc(t[2]).food
                         prodAvailable -= 8
-                        x += 1
-                        
-                    """
-                    if prodAvailable >= 8:
-                        options = []
-                        for city in players[0].cities:
-                            surr = board.getLoc(city).getDistAway()
-                            for loc in surr:
-                                score = board.terrainResistance(loc, [None, PlayerTag.US, PlayerTag.TA, PlayerTag.TB, PlayerTag.TC])
-                                options.append((score, loc, city))
-                        options.sort(key=lambda x: x[0], reverse=True)
-                        
-                        x = 0
-                        while x < ((prodAvailable - prodAvailable % 8) / 8) and x < len(options) and prodAvailable > 0:
-                            cl.produce(ProduceType.ARMY, options[x][2])
-                            a = Army()
-                            a.setPos(options[x][2])
-                            a.setDestination(options[x][1])
+                        players[0].units += 1
+                if prodAvailable >= 8:
+                    # If still production, throw armies at the problem until it sticks.
+                    newPriorities = []
+                    for city in players[0].cities:
+                        if board.enemyClose(city) and prodAvailable >= 8 and players[0].units <= foodAvailable:
+                            cl.produce(ProduceType.ARMY, city)
+                            a = Army(city, city)
                             players[0].armies.append(a)
                             prodAvailable -= 8
-                            x += 1
-                    """
-                    cl.endTurn()
+                            players[0].units +=1
+                
 
             for worker in players[0].workers:
                 if not worker.atDestination():
                     newPos = worker.getNext()
                     cl.moveWorker(worker.currPos, newPos)
-                    worker.currPos = newPos
-            """
+                    worker.setPos(newPos)
+            
             for army in players[0].armies:
+                newDestSet = False
+                if not board.enemyClose(army.currPos):
+                    for city in player[0].cities:
+                        if board.enemyClose(city) and not newDestSet:
+                            army.setDest(city)
+                            newDestSet = True
+                
+                if len(board.enemyCityClose(army.currPos)) >= 1 and army.currPos in players[0].cities:
+                    for city in board.enemyCityClose(army.currPos):
+                        own = board.getLoc(city).owner.value
+                        hplost = board.calcHP(city,3,players[0].offense, players[own].defense)
+                        if army.hp - hplost > 0 and not newDestSet:
+                            army.setDest(city)
+                            newDestSet = True
+
                 if not army.atDestination():
                     newPos = army.getNext()
                     cl.moveArmy(army.currPos, newPos)
                     army.currPos = newPos
-            """
-
+            
+            cl.endTurn()
                 
                     
 
 if __name__ == "__main__":  
-    #__main__("dumpster fire", "ahZai6ie", "https://codekata-civ.herokuapp.com/" )
-    __main__("b", "secret0", "http://localhost:8080")
+    __main__("o.O", "ahZai6ie", "https://codekata-civ.herokuapp.com/" )
+    #__main__("b", "secret0", "http://localhost:8080")
 
     
 

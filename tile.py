@@ -14,6 +14,7 @@ class Tile:
         self.tileType = TileType.FOW
         self.hasCity = False
         self.hasArmy = False
+        self.armyUnits = []
         self.hasWorkers = False
     
     def setOwner(self, owner: PlayerTag):
@@ -77,7 +78,7 @@ class Tile:
     
     def getDistAway(self, dist: int = 2):
         """
-        Gets tiles within manhattan distance dist of current tile.
+        Gets tiles within manhattan distance dist of current tile, excluding current
         """
         ret = []
         minX = max(0, self.x - dist)
@@ -87,7 +88,7 @@ class Tile:
         for x in range(minX, maxX):
             for y in range(minY, maxY):
                 loc = (x, y)
-                if self.isDistAway(loc):
+                if self.isDistAway(loc,dist):
                     ret.append(loc)
         return ret
     
@@ -117,6 +118,9 @@ class Tile:
             return (self.owner != PlayerTag.US)
         else:
             return None
+
+    def getResScore(self):
+        return self.food + self.prod + self.trade
 """
 x = Tile((0, 0))
 

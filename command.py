@@ -35,11 +35,15 @@ class Client:
     def produce(self, typ: ProduceType, srcTup: tuple):
         params = {"key": self.key, "type": typ.value, "x": srcTup[0], "y": srcTup[1]}
         x = json.loads(requests.post(self.url + "produce", params=params).text)
-        assert x["error"] == None
+        #assert x["error"] == None
+        if x["error"] !=None:
+            print(x)
+            print(params)
     
     def produceTech(self, techType: TechType):
-        params = {"key": self.key, "technology": techType.value}
-        requests.post(self.url+"technology", params = params)
+        params = {"key": self.key, "type": techType.value}
+        x = json.loads(requests.post(self.url + "technology", params=params).text)
+        #print(x)
 
     def moveWorker(self, srcTup: tuple, toTup: tuple):
         params = {"key": self.key, "srcX": srcTup[0], "srcY": srcTup[1], "dstX": toTup[0], "dstY": toTup[1]}

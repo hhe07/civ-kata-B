@@ -29,45 +29,55 @@ class Board:
                 self.getLoc((x, 31 - y)).setType(typ)
                 self.getLoc((31 - x, 31 - y)).setType(typ)
         
-        posX = 0
+        
         posY = 0
         for row in board:
+            posX = 0
             for item in row:
                 if item!=-1:
                     self.visible.append((posX, posY))
                 posX += 1
             posY += 1
-        
     
     def updateCities(self, cities: list):
         """
         Updates city locations for all tiles
         """
-        playerCount = 0
+        playert = 0
         for player in cities:
             for city in player:
-                self.allTiles[city["x"]][city["y"]].setOwner(PlayerTag(playerCount))
-                self.allTiles[city["x"]][city["y"]].setCity()
-            playerCount += 1
+                pos = (city["x"], city["y"])
+                t = self.getLoc(pos)
+                t.setOwner(PlayerTag(playert))
+                t.setCity()
+            playert+=1
         
     def updateArmies(self, armies: list):
         for row in self.allTiles:
             for t in row:
                 t.hasArmy = False
-        for army in armies:
-            pos = army.currPos
-            t = self.getLoc(pos)
-            t.addArmy()
-        # TODO: Armies reset - not safe, also army names are pizdec
-    
+        playert = 0
+        for player in armies:
+            for army in player:
+                pos = (army["x"],army["y"])
+                t = self.getLoc(pos)
+                t.setOwner(PlayerTag(playert))
+                t.addArmy()
+                t.armyUnits.append(pos)
+            playert += 1
+        
     def updateWorkers(self, workers: list):
         for row in self.allTiles:
             for t in row:
-                t.hasArmy = False
-        for worker in workers:
-            pos = worker.currPos
-            t = self.getLoc(pos)
-            t.addArmy()
+                t.hasWorkers = False
+        playert = 0
+        for player in workers:
+            for worker in player:
+                pos = (worker["x"],worker["y"])
+                t = self.getLoc(pos)
+                t.setOwner(PlayerTag(playert))
+                t.addWorkers()
+            playert+=1
 
     def terrainResistance(self, pos: tuple, owners: list, dist: int = 2):
         """
@@ -95,9 +105,9 @@ class Board:
         for loc in surrounding:
             t = self.getLoc(loc)
             if t.owner in owners:
-                score = t.prod + t.food + t.trade
+                score = t.getResScore()
                 tp = highestVal[0]
-                prevScore = tp.prod + t.food + t.trade
+                prevScore = tp.getResScore()
                 if score > prevScore:
                     highestVal = [t]
                 if score == prevScore:
@@ -116,23 +126,68 @@ class Board:
             surTile = self.getLoc(surTileTup)
             if surTile.hasArmies():
                 if surTile.owner == PlayerTag.US:
-                    attackingArmies.extend(surTile.armies)
+                    attackingArmies.extend(surTile.armyUnits)
                 else:
-                    defendingArmies.extend(surTile.armies)
+                    defendingArmies.extend(surTile.armyUnits)
         attackingDmg = 0
         for x in attackingArmies:
             """
             Attacking damage calculation
             """
-            attackingDmg += (myOff / theirDef) * 1 * len(tile.armies) * (x.currTileResist / tile.resistance)
-        for y in defendingArmies:
-            """
-            Calculates HP lost by counterattack
-            """
-            # TODO: Implement
-            pass
+            attackingDmg += (myOff / theirDef) * 1 * len(tile.armies) * (self.getLoc(x).resistance / tile.resistance)
         return attackingDmg
 
+    def isSaturated(self, tile: tuple):
+        surr = self.getLoc(tile).getDistAway()
+        isSaturated = 0
+        for loc in surr:
+            if self.getLoc(loc).hasWorkers or self.getLoc(loc).hasCity:
+                isSaturated += 1
+        return isSaturated == len(surr)
+    
+    def isFullDet(self, tile: tuple):
+        surr = self.getLoc(tile).getDistAway()
+        isDet = 0
+        for loc in surr:
+            if not self.getLoc(loc).hasWorkers and not self.getLoc(loc).hasCity:
+                isDet +=1
+        return isDet == len(surr)
+
+    def getUnfilledWork(self, tile: tuple):
+        ret = []
+        surr = self.getLoc(tile).getDistAway()
+        for loc in surr:
+            t = self.getLoc(loc)
+            if not t.hasWorkers:
+               ret.append((t.getResScore(), tile, loc))
+        return ret
+    
+    def getPossibleCities(self):
+        ret = []
+        for loc in self.visible:
+            if self.isFullDet(loc):
+                # TODO: Potential for possible tiles that aren't fully away?
+                ret.append((self.terrainResistance(loc, [PlayerTag.US, None]), loc))
+        ret.sort(key=lambda x: x[0], reverse=True)
+        return ret
+
+    def enemyClose(self, tile: tuple, dist: int = 3):
+        surr = self.getLoc(tile).getDistAway(dist)
+        for t in surr:
+            l = self.getLoc(t)
+            if l.owner != PlayerTag.US and l.owner != None:
+                return True
+
+    def enemyCityClose(self, tile: tuple, dist: int = 3):
+        close = []
+        surr = self.getLoc(tile).getDistAway(dist)
+        for t in surr:
+            l = self.getLoc(t)
+            if l.owner != PlayerTag.US and l.owner != None and l.hasCity:
+                close.append(t)
+        return close
+        
+            
 
 """            
 cl = Client("secret0", "http://localhost:8080")

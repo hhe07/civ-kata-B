@@ -30,3 +30,8 @@ TileProps = {
     TileType.FOREST: (1.5, 2, 3, 0),
     TileType.MOUNTAINS: (2.0, 1, 1, 0)
 }
+
+class defPriority(Enum):
+    LOW = 0
+    MED = 1
+    HIGH = 2

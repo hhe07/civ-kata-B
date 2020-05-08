@@ -16,6 +16,7 @@ class Player:
         self.armyIds = []
         self.workers = []
         self.cities = []
+        self.units = 0
 
     def updateRes(self, resources: dict):
         self.prevProd = self.production
@@ -29,14 +30,16 @@ class Player:
                 self.worstPossibleCities += (self.production - (self.production % 24)) / 8
     
     def updateCities(self, cities: list):
+        self.cities = []
         for city in cities:
-            self.cities.append((city["x"],city["y"]))
+            loc = (city["x"],city["y"])
+            self.cities.append(loc)
     def updateBuffs(self, buffs: dict):
         self.defense = buffs["defense"]
         self.offense = buffs["offense"]
     
     def getMaxSustain(self):
-        return max(self.food - 2, 0)
+        return max(self.food, 0)
 
     def canSmallConstr(self):
         return (self.production >= 8) and (self.getMaxSustain() > len(self.armies) + len(self.armies))
